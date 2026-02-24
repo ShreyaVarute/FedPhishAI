@@ -1,0 +1,18 @@
+fl:
+  num_clients: 8
+  num_rounds: 10
+  min_fit_clients: 8
+
+training:
+  learning_rate: 2.0e-5
+  batch_size: 16
+  epochs_per_round: 1
+
+privacy:
+  dp_noise: 0.01 # Set 0.0 to disable DP
+  clip_norm: 1.0
+
+model:
+  distilbert: "distilbert-base-uncased"
+  t5: "t5-small"
+  save_dir: "models/distilbert_federated/"

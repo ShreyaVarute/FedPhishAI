@@ -1,0 +1,33 @@
+# ── Core ML ──────────────────────────────────────────
+torch==2.2.0
+transformers==4.38.2
+datasets==2.18.0
+scikit-learn==1.4.2
+numpy==1.26.4
+pandas==2.2.1
+accelerate==0.27.2
+
+# ── Federated Learning ───────────────────────────────
+flwr==1.8.0
+flwr-datasets==0.1.0
+
+# ── Differential Privacy ─────────────────────────────
+opacus==1.4.0
+
+# ── Explanation Generation ───────────────────────────
+sentencepiece==0.1.99
+rouge-score==0.1.2
+nltk==3.8.1
+textstat==0.7.3
+
+# ── Visualization & Utilities ────────────────────────
+matplotlib==3.8.3
+seaborn==0.13.2
+pyyaml==6.0.1
+python-dotenv==1.0.1
+tqdm==4.66.2
+openai==1.14.3
+
+# ── Notebook Support ─────────────────────────────────
+jupyter==1.0.0
+ipykernel==6.29.3
