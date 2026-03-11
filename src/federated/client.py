@@ -1,63 +1,66 @@
-import flwr as fl
+import copy
 import torch
-from collections import OrderedDict
-from src.detection.model import PhishingDetector
-from src.detection.trainer import EmailDataset, train_one_epoch
-from torch.utils.data import DataLoader
+import torch.nn as nn
 from torch.optim import AdamW
 from transformers import get_linear_schedule_with_warmup
-from src.federated.privacy import add_dp_noise
-import numpy as np
+from src.data.loader import get_dataloader
 
-class PhishingClient(fl.client.NumPyClient):
-    def __init__(self, client_id, train_path, val_path, dp_noise=0.01):
-        self.client_id  = client_id
-        self.dp_noise   = dp_noise
-        self.device     = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model      = PhishingDetector().to(self.device)
-        self.train_data = DataLoader(EmailDataset(train_path), batch_size=16, shuffle=True)
-        self.val_data   = DataLoader(EmailDataset(val_path),   batch_size=32)
-        self.confidence = 0.5
 
-    def get_parameters(self, config):
-        params = [v.cpu().numpy() for v in self.model.state_dict().values()]
-        return add_dp_noise(params, noise_scale=self.dp_noise)
+class FederatedClient:
+    def __init__(
+        self,
+        client_id: int,
+        data_path: str,
+        model,
+        device: str,
+        local_epochs: int = 2,
+        batch_size: int = 16,
+        learning_rate: float = 2e-5
+    ):
+        self.client_id = client_id
+        self.data_path = data_path
+        self.device = device
+        self.local_epochs = local_epochs
+        self.batch_size = batch_size
+        self.learning_rate = learning_rate
 
-    def set_parameters(self, parameters):
-        state = OrderedDict(
-            {k: torch.tensor(v) for k, v in
-             zip(self.model.state_dict().keys(), parameters)}
-        )
-        self.model.load_state_dict(state, strict=True)
+        # Local copy of the global model
+        self.model = copy.deepcopy(model).to(device)
+        self.criterion = nn.CrossEntropyLoss()
 
-    def fit(self, parameters, config):
-        self.set_parameters(parameters)
-        optimizer = AdamW(self.model.parameters(), lr=2e-5)
+    def update_model(self, global_weights):
+        """Update local model with global weights from server."""
+        self.model.load_state_dict(copy.deepcopy(global_weights))
+
+    def train_local(self):
+        """Train local model on client data and return updated weights."""
+        self.model.train()
+        loader = get_dataloader(self.data_path, batch_size=self.batch_size, shuffle=True)
+
+        optimizer = AdamW(self.model.parameters(), lr=self.learning_rate, weight_decay=0.01)
+        total_steps = len(loader) * self.local_epochs
         scheduler = get_linear_schedule_with_warmup(
-            optimizer, num_warmup_steps=0,
-            num_training_steps=len(self.train_data)
+            optimizer,
+            num_warmup_steps=max(1, int(0.1 * total_steps)),
+            num_training_steps=total_steps
         )
-        loss = train_one_epoch(self.model, self.train_data, optimizer, scheduler, self.device)
-        print(f'[Client {self.client_id}] Loss: {loss:.4f}')
-        return self.get_parameters(config), len(self.train_data.dataset), {}
 
-    def evaluate(self, parameters, config):
-        self.set_parameters(parameters)
-        self.model.eval()
-        correct, total, conf_sum = 0, 0, 0
-        with torch.no_grad():
-            for batch in self.val_data:
-                ids   = batch['input_ids'].to(self.device)
-                mask  = batch['attention_mask'].to(self.device)
-                lbls  = batch['label'].to(self.device)
-                logits, _ = self.model(ids, mask)
-                probs     = torch.softmax(logits, dim=1)
-                conf_sum += probs.max(dim=1).values.sum().item()
-                correct  += (logits.argmax(dim=1) == lbls).sum().item()
-                total    += lbls.size(0)
-        self.confidence = conf_sum / total
-        accuracy        = correct / total
-        return float(1 - accuracy), total, {
-            'accuracy':   accuracy,
-            'confidence': self.confidence
-        }
+        total_loss = 0
+        for epoch in range(self.local_epochs):
+            for batch in loader:
+                input_ids = batch['input_ids'].to(self.device)
+                attention_mask = batch['attention_mask'].to(self.device)
+                labels = batch['label'].to(self.device)
+
+                optimizer.zero_grad()
+                logits = self.model(input_ids, attention_mask)
+                loss = self.criterion(logits, labels)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                optimizer.step()
+                scheduler.step()
+                total_loss += loss.item()
+
+        avg_loss = total_loss / (len(loader) * self.local_epochs)
+        print(f"  Client {self.client_id}: avg loss = {avg_loss:.4f}")
+        return self.model.state_dict(), len(loader.dataset)

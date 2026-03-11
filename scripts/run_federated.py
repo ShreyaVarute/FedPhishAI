@@ -1,35 +1,31 @@
 """
-Federated training simulation (all clients in-process via Flower).
+Run federated learning training.
 Run: python scripts/run_federated.py
 """
-import flwr as fl
-from src.federated.client import PhishingClient
-from src.federated.server import FedAvgPlusPlus
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-NUM_CLIENTS = 8
-NUM_ROUNDS  = 10
-DP_NOISE    = 0.01   # Change for privacy tradeoff experiments
+from src.federated.federated_trainer import FederatedTrainer
 
-def client_fn(cid: str):
-    i = int(cid)
-    return PhishingClient(
-        client_id  = i,
-        train_path = f'data/federated/client_{i}/train.csv',
-        val_path   = f'data/federated/client_{i}/val.csv',
-        dp_noise   = DP_NOISE
+
+def main():
+    trainer = FederatedTrainer(
+        train_csv='data/processed/train.csv',
+        val_csv='data/processed/val.csv',
+        num_clients=8,
+        num_rounds=10,
+        local_epochs=2,
+        batch_size=16,
+        learning_rate=2e-5,
+        use_differential_privacy=True,
+        noise_multiplier=0.5,
+        max_grad_norm=1.0,
+        model_save_dir='models/distilbert_federated'
     )
+    history = trainer.train()
+    print("\nFederated training complete!")
 
-strategy = FedAvgPlusPlus(
-    min_available_clients = NUM_CLIENTS,
-    min_fit_clients       = NUM_CLIENTS,
-    min_evaluate_clients  = NUM_CLIENTS,
-)
 
-fl.simulation.start_simulation(
-    client_fn        = client_fn,
-    num_clients      = NUM_CLIENTS,
-    config           = fl.server.ServerConfig(num_rounds=NUM_ROUNDS),
-    strategy         = strategy,
-    client_resources = {'num_cpus': 1},
-)
-print('Federated training complete.')
+if __name__ == '__main__':
+    main()

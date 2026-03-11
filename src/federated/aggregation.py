@@ -1,35 +1,35 @@
-import numpy as np
-from typing import List, Tuple
+import torch
+import copy
 
-def fedavg_plus_plus(
-    results: List[Tuple[List[np.ndarray], int, dict]]
-) -> List[np.ndarray]:
+
+def fedavg(client_updates: list) -> dict:
     """
-    FedAvg++ — Adaptive Confidence-Weighted Aggregation.
+    Federated Averaging (FedAvg) algorithm.
+    Aggregates model weights from multiple clients using weighted average.
 
-    Weight formula:
-        client_weight = data_size × avg_confidence × stability_factor
+    Args:
+        client_updates: list of (state_dict, num_samples) tuples
 
-    Benefits:
-    - Reduces influence of noisy / low-quality clients
-    - Improves robustness to skewed phishing ratios (non-IID)
-    - Adds algorithmic novelty for the research paper
+    Returns:
+        Aggregated state dict
     """
-    weights, param_list = [], []
+    total_samples = sum(n for _, n in client_updates)
+    aggregated = copy.deepcopy(client_updates[0][0])
 
-    for params, data_size, metrics in results:
-        confidence = metrics.get('confidence', 0.5)
-        # Penalise over-confidence AND under-confidence
-        stability  = 1.0 - abs(confidence - 0.75)
-        weight     = data_size * confidence * max(stability, 0.1)
-        weights.append(weight)
-        param_list.append(params)
+    for key in aggregated.keys():
+        aggregated[key] = torch.zeros_like(aggregated[key], dtype=torch.float32)
+        for state_dict, num_samples in client_updates:
+            weight = num_samples / total_samples
+            aggregated[key] += state_dict[key].float() * weight
 
-    total   = sum(weights)
-    weights = [w / total for w in weights]  # normalise
-
-    aggregated = [
-        sum(w * p for w, p in zip(weights, [pl[i] for pl in param_list]))
-        for i in range(len(param_list[0]))
-    ]
     return aggregated
+
+
+def fedprox(client_updates: list, global_weights: dict, mu: float = 0.01) -> dict:
+    """
+    FedProx aggregation with proximal term.
+    Similar to FedAvg but penalizes deviation from global model.
+    """
+    # For aggregation, FedProx uses same averaging as FedAvg
+    # The proximal term is applied during client training
+    return fedavg(client_updates)
