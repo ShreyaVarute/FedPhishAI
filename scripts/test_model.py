@@ -43,40 +43,90 @@ def main():
     model.load_state_dict(torch.load(model_path, map_location=device))
     preprocessor = EmailPreprocessor()
 
-    # Test emails - mix of legitimate and phishing
+    # Improved test emails
     test_emails = [
-        # Should be PHISHING
+
+        # ---------------- PHISHING EMAILS ----------------
         {
-            "text": "URGENT: Your PayPal account has been suspended. Click here immediately to verify your identity and restore access: http://paypal-secure-login.xyz/verify",
+            "text": "URGENT: Your PayPal account has been suspended due to suspicious activity. Please verify your account immediately using the secure link below.",
             "expected": "PHISHING"
         },
         {
-            "text": "Congratulations! You have won $1,000,000 in our lottery. Send your bank details to claim your prize. Act now before it expires!",
+            "text": "Security Alert: We detected unauthorized login attempts on your bank account. Confirm your credentials within 24 hours to prevent suspension.",
             "expected": "PHISHING"
         },
         {
-            "text": "Dear customer, your bank account will be closed in 24 hours unless you confirm your credentials at this link. This is your final warning.",
+            "text": "Congratulations! You have been selected as the winner of our international lottery. Send your bank details to receive your prize.",
             "expected": "PHISHING"
         },
-        # Should be LEGITIMATE
         {
-            "text": "Hi John, just a reminder about our team meeting tomorrow at 2pm in conference room B. Please bring your project updates.",
+            "text": "Your Netflix payment failed. Update your billing information now to continue enjoying our services without interruption.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "Your Apple ID has been locked due to suspicious activity. Click the link below to restore access to your account.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "We noticed suspicious activity on your Amazon account. Please reset your password immediately to protect your account.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "Important Notice: Your mailbox has exceeded its storage limit. Verify your account now to avoid losing incoming emails.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "You have received a tax refund of $450. Please confirm your details to process the refund to your bank account.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "Your package delivery failed due to incorrect address details. Update your shipping information immediately.",
+            "expected": "PHISHING"
+        },
+        {
+            "text": "Final warning: Your online banking access will be disabled unless you verify your identity immediately.",
+            "expected": "PHISHING"
+        },
+
+        # ---------------- LEGITIMATE EMAILS ----------------
+        {
+            "text": "Subject: Meeting Reminder\n\nHi team,\nJust a reminder that our weekly project meeting will take place tomorrow at 10 AM in the conference room.",
             "expected": "LEGITIMATE"
         },
         {
-            "text": "Happy Birthday! Hope you have a wonderful day filled with joy and celebration. Looking forward to seeing you at the party!",
+            "text": "Hi John,\n\nCan you please review the updated financial report before the board meeting on Friday?",
             "expected": "LEGITIMATE"
         },
         {
-            "text": "Hey, are you free for lunch this week? There's a new restaurant downtown I've been wanting to try. Let me know what works for you.",
+            "text": "Subject: Team Lunch\n\nHello everyone,\nWe are planning a team lunch this Friday at 1 PM. Please confirm your availability.",
             "expected": "LEGITIMATE"
         },
         {
-            "text": "The quarterly report is attached. Please review the revenue figures for Q3 before our board meeting on Friday.",
+            "text": "Hi Sarah,\n\nThank you for sending the updated presentation slides. I'll review them before tomorrow's meeting.",
             "expected": "LEGITIMATE"
         },
         {
-            "text": "Your Amazon order #112-3456789 has shipped and will arrive by Thursday. Track your package using the order details in your account.",
+            "text": "Subject: Assignment Deadline\n\nDear students,\nThe deadline for submitting the assignment has been extended to Monday.",
+            "expected": "LEGITIMATE"
+        },
+        {
+            "text": "Hello,\n\nYour order has been successfully processed and will be shipped within the next two business days.",
+            "expected": "LEGITIMATE"
+        },
+        {
+            "text": "Hi Mark,\n\nThanks again for your help with the project report yesterday. I really appreciate your support.",
+            "expected": "LEGITIMATE"
+        },
+        {
+            "text": "Subject: Travel Itinerary\n\nAttached is the travel itinerary for your upcoming business trip next week.",
+            "expected": "LEGITIMATE"
+        },
+        {
+            "text": "Hi team,\n\nPlease find the meeting notes attached from today's discussion.",
+            "expected": "LEGITIMATE"
+        },
+        {
+            "text": "Hello,\n\nYour Amazon order has shipped and will arrive by Thursday. Track the shipment using your order page.",
             "expected": "LEGITIMATE"
         },
     ]
@@ -88,6 +138,7 @@ def main():
     correct = 0
     for i, email in enumerate(test_emails):
         label, phish_prob, legit_prob = predict_email(model, preprocessor, email["text"], device)
+
         is_correct = label == email["expected"]
         correct += int(is_correct)
         status = "✓" if is_correct else "✗"

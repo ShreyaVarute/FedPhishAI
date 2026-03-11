@@ -112,14 +112,19 @@ def main():
     
     # -------- SAMPLE DATASET (for fast testing) --------
     USE_SAMPLE = True
-    SAMPLE_SIZE = 50000
-
-    if USE_SAMPLE:
+    SAMPLE_SIZE = None
+    
+    # Optional sampling for debugging
+    if SAMPLE_SIZE is not None:
         combined = combined.sample(
             n=min(SAMPLE_SIZE, len(combined)),
             random_state=42
         )
         print(f"\nUsing SAMPLE dataset: {len(combined)} emails")
+    else:
+        print("\nUsing FULL dataset (class weights will handle imbalance)")
+
+    
 #------------------------------------------------------------------------
     print("\nUsing FULL dataset (class weights will handle imbalance)")
 
