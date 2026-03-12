@@ -26,7 +26,7 @@ def evaluate():
     print("Loading validation dataset...")
 
     dataset = EmailDataset(val_path)
-    loader = DataLoader(dataset, batch_size=32, shuffle=False)
+    loader = DataLoader(dataset, batch_size=128, shuffle=False)
 
     print(f"Validation samples: {len(dataset)}")
 
