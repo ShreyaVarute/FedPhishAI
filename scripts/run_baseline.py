@@ -13,7 +13,7 @@ def main():
         train_csv='data/processed/train.csv',
         val_csv='data/processed/val.csv',
         model_save_dir='models/distilbert_baseline',
-        epochs=1,
+        epochs=3,
         batch_size=32,
         learning_rate=2e-5,
         max_length=256
