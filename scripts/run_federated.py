@@ -13,13 +13,13 @@ def main():
     trainer = FederatedTrainer(
         train_csv='data/processed/train.csv',
         val_csv='data/processed/val.csv',
-        num_clients=8,
-        num_rounds=10,
-        local_epochs=2,
-        batch_size=16,
+        num_clients=4,
+        num_rounds=2,
+        local_epochs=1,
+        batch_size=64,
         learning_rate=2e-5,
         use_differential_privacy=True,
-        noise_multiplier=0.5,
+        noise_multiplier=0.01,
         max_grad_norm=1.0,
         model_save_dir='models/distilbert_federated'
     )
