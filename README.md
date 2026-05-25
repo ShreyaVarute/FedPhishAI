@@ -31,7 +31,3 @@ python scripts/run_federated.py
 ```bash
 python scripts/plot_metrics.py
 ```
-
-## Key Fix: Shortcut Learning
-The model was predicting all emails as phishing because it learned URL/email presence as shortcuts.
-Fixed by replacing URLs → `urltoken` and emails → `emailtoken` in `preprocessor.py`, forcing semantic learning.
